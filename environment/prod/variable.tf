@@ -1,0 +1,9 @@
+variable "RGS" {}
+variable "STG" {}
+variable "SCON" {}
+variable "VNET" {}
+variable "SNET" {}
+variable "BASTION" {}
+variable "VM" {}
+variable "LB" {}
+variable "LB_VM_ASSOC" {}
