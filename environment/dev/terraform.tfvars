@@ -3,11 +3,11 @@ RGS = {
     rg_name  = "RG-Munesh-dev"
     location = "Westus2"
   }
-    RG2 = {
+  RG2 = {
     rg_name  = "RG-Tinku-dev"
     location = "Westus2"
   }
-      RG3 = {
+  RG3 = {
     rg_name  = "RG-Pinku-dev"
     location = "Westus2"
   }
