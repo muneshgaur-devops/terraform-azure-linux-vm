@@ -29,21 +29,24 @@ on:
           - apply
           - destroy
 
-# Required for Azure OIDC authentication
+
+# Required for GitHub OIDC authentication with Azure
 permissions:
   id-token: write
   contents: read
 
+
 jobs:
 
-  # =========================================================
-  # TERRAFORM FORMAT
-  # =========================================================
+  # ============================================================
+  # TERRAFORM FORMAT & LINT
+  # ============================================================
   terraform-fmt:
     name: 'Terraform Format & Lint'
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -56,9 +59,9 @@ jobs:
         run: terraform fmt -check -recursive
 
 
-  # =========================================================
-  # TERRAFORM DEV
-  # =========================================================
+  # ============================================================
+  # TERRAFORM DEV ENVIRONMENT
+  # ============================================================
   terraform-dev:
     name: 'Terraform Dev Environment'
     runs-on: ubuntu-latest
@@ -70,7 +73,7 @@ jobs:
       run:
         working-directory: ./environment/dev
 
-    # Terraform Azure authentication through OIDC
+    # Azure OIDC credentials for Terraform
     env:
       ARM_USE_OIDC: true
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -89,15 +92,19 @@ jobs:
           terraform_version: 1.8.0
 
 
-      # =====================================================
-      # AZURE OIDC LOGIN
-      # =====================================================
+      # ========================================================
+      # AZURE LOGIN USING APP REGISTRATION + FEDERATED IDENTITY
+      # ========================================================
       - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+
+      - name: Verify Azure Login
+        run: az account show
 
 
       - name: Terraform Init
@@ -122,9 +129,9 @@ jobs:
         run: terraform destroy -auto-approve -var-file="terraform.tfvars"
 
 
-  # =========================================================
-  # TERRAFORM PROD
-  # =========================================================
+  # ============================================================
+  # TERRAFORM PROD ENVIRONMENT
+  # ============================================================
   terraform-prod:
     name: 'Terraform Prod Environment'
     runs-on: ubuntu-latest
@@ -136,7 +143,7 @@ jobs:
       run:
         working-directory: ./environment/prod
 
-    # Terraform Azure authentication through OIDC
+    # Azure OIDC credentials for Terraform
     env:
       ARM_USE_OIDC: true
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -155,15 +162,19 @@ jobs:
           terraform_version: 1.8.0
 
 
-      # =====================================================
-      # AZURE OIDC LOGIN
-      # =====================================================
+      # ========================================================
+      # AZURE LOGIN USING APP REGISTRATION + FEDERATED IDENTITY
+      # ========================================================
       - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+
+      - name: Verify Azure Login
+        run: az account show
 
 
       - name: Terraform Init
@@ -186,3 +197,4 @@ jobs:
       - name: Terraform Destroy
         if: "${{ github.event_name == 'workflow_dispatch' && inputs.action == 'destroy' }}"
         run: terraform destroy -auto-approve -var-file="terraform.tfvars"
+```
