@@ -1,0 +1,131 @@
+name: 'Terraform CI'
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - 'feature**'
+  pull_request:
+    branches:
+      - main
+      - master
+      - 'feature**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  fmt-and-lint:
+    name: 'Terraform Format, Lint & Security Scan'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.0'
+
+      - name: Check Terraform Formatting
+        id: fmt
+        run: terraform fmt -check -recursive
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.50.0
+
+      - name: Init TFLint
+        run: tflint --init
+
+      - name: Run TFLint
+        run: tflint --recursive
+
+      - name: Security Scan with tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          soft_fail: true
+
+  validate-modules:
+    name: 'Validate Module (${{ matrix.module }})'
+    runs-on: ubuntu-latest
+    needs: fmt-and-lint
+
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - azurerm_bastion
+          - azurerm_lb
+          - azurerm_resource_group
+          - azurerm_storage_account
+          - azurerm_storage_container
+          - azurerm_subnet
+          - azurerm_virtual_machine
+          - azurerm_virtual_network
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.0'
+
+      - name: Terraform Init Module
+        run: terraform init -backend=false
+        working-directory: ./module/${{ matrix.module }}
+
+      - name: Terraform Validate Module
+        run: terraform validate
+        working-directory: ./module/${{ matrix.module }}
+
+  validate-and-plan-environments:
+    name: 'Validate & Plan Environment (${{ matrix.environment }})'
+    runs-on: ubuntu-latest
+    needs: validate-modules
+
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - dev
+          - prod
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.0'
+
+      - name: Terraform Init Environment
+        run: terraform init -backend=false
+        working-directory: ./environment/${{ matrix.environment }}
+
+      - name: Terraform Validate Environment
+        run: terraform validate
+        working-directory: ./environment/${{ matrix.environment }}
+
+      - name: Run Terraform Plan
+        run: |
+          if [ -n "$ARM_CLIENT_ID" ]; then
+            terraform plan -input=false
+          else
+            echo "Azure credentials not configured in Secrets. Skipping live plan step."
+            terraform validate
+          fi
+        working-directory: ./environment/${{ matrix.environment }}
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
