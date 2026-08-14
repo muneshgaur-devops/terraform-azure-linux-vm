@@ -11,6 +11,10 @@ RGS = {
     rg_name  = "RG-Pinku-dev"
     location = "Westus2"
   }
+  RG4 = {
+    rg_name  = "RG-Lachu-dev"
+    location = "Westus2"
+  }
 }
 STG = {
   STG1 = {
